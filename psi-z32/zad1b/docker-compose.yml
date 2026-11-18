@@ -1,0 +1,24 @@
+name: z32_zad1b
+
+services:
+  server:
+    build: ./server
+    image: z32_zad1b_server
+    container_name: z32_zad1b_server
+    networks:
+      z32net:
+        ipv4_address: 172.21.32.10
+
+  client:
+    build: ./client
+    image: z32_zad1b_client
+    container_name: z32_zad1b_client
+    depends_on: [server]
+    networks:
+      z32net:
+        ipv4_address: 172.21.32.11
+
+networks:
+  z32net:
+    external: true
+    name: z32_network
