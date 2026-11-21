@@ -5,6 +5,7 @@ services:
     build: ./server
     image: z32_zad1b_server
     container_name: z32_zad1b_server
+    command: ["5000"]
     networks:
       z32net:
         ipv4_address: 172.21.32.10
@@ -13,6 +14,7 @@ services:
     build: ./client
     image: z32_zad1b_client
     container_name: z32_zad1b_client
+    command: ["z32_zad1b_server", "5000"]
     depends_on: [server]
     networks:
       z32net:
