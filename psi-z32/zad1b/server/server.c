@@ -4,6 +4,9 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+#define BUF_SIZE 1024
+#define DELAY_US 100000
+
 int main(int argc, char *argv[])
 {
     int port = (argc > 1) ? atoi(argv[1]) : 5000;
@@ -38,14 +41,19 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        char buf[256];
-        ssize_t n = recv(cli_sfd, buf, sizeof(buf) - 1, 0);
-        if (n > 0) {
-            buf[n] = '\0';
-            printf("od %s: %s\n", inet_ntoa(cli.sin_addr), buf);
-            sleep(2);
-            send(cli_sfd, "OK", 2, 0);
+        printf("polaczenie od %s\n", inet_ntoa(cli.sin_addr));
+
+        char buf[BUF_SIZE];
+        long long total = 0;
+        ssize_t n;
+
+        while ((n = recv(cli_sfd, buf, sizeof(buf), 0)) > 0) {
+            total += n;
+            usleep(DELAY_US);
         }
+        if (n < 0) perror("recv");
+
+        printf("koniec polaczenia od %s: odebrano %lld B\n", inet_ntoa(cli.sin_addr), total);
         close(cli_sfd);
     }
 }
