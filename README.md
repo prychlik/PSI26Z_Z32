@@ -1,10 +1,10 @@
 # PSI 26Z Zespół 32
 
 ## Zadanie 1B
-Aby uruchomić serwer oraz klienta należy wejść do folderu `/psi-z32` oraz uruchomić skrypt `run.sh`
+Aby uruchomić serwer oraz klienta należy wejść do folderu `/zad1b` oraz uruchomić skrypt `run.sh`
 
 ```shell
-cd psi-z32
+cd zad1b
 ./run.sh
 ```
 
@@ -43,7 +43,7 @@ networks:
 
 ```
 
-Aby zatrzymać kontenery można użyć skryptu `stop.sh` również z folderu `/psi-z32`
+Aby zatrzymać kontenery można użyć skryptu `stop.sh` również z folderu `/zad1b`
 
 ```shell
 ./stop.sh
