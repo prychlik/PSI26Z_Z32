@@ -65,6 +65,11 @@ int main(int argc, char *argv[])
     long long delay_count = 0;
     long long write_time = 0;
     long long max_delay = 0;
+    long long start_time = 0;
+    long long finish_time = 0;
+    long long first_delay_bytes = -1;
+    long long first_delay_time = -1;
+    long long first_delay_value = 0;
 
     while(total_written_data < DATA_SIZE){
         size_t write_size = (DATA_SIZE - total_written_data < buf_size) ? (size_t)(DATA_SIZE - total_written_data) : buf_size; 
@@ -77,13 +82,26 @@ int main(int argc, char *argv[])
         total_written_data += written_data;
         time_diff = after_time - before_time;
         write_time += time_diff;
-        printf("%lld:\tWysłano %dB danych. Łącznie: %lldB Czas wysyłania danych: %lldus\n", counter, written_data, total_written_data, time_diff);
+        // printf("%lld:\tWysłano %dB danych. Łącznie: %lldB Czas wysyłania danych: %lldus\n", counter, written_data, total_written_data, time_diff);
+
+        if(counter == 0){
+            start_time = before_time;
+        }
+        if(total_written_data >= DATA_SIZE){
+            finish_time = after_time;
+        }
 
         if (time_diff > 1000){
             delay_sum += time_diff;
             delay_count++;
             if (time_diff > max_delay){
                 max_delay = time_diff;
+            }
+            if (first_delay_bytes == -1 && time_diff > 1000*1000){
+                // za pierwsze faktyczne opóźnienie uznaję > 1s, bo zdarzają się takie np. 41ms
+                first_delay_bytes = total_written_data - written_data;
+                first_delay_time = before_time - start_time;
+                first_delay_value = time_diff;
             }
             printf("Opóźnienie %lldus podczas wysyłania bufora nr %lld! Wysłano łącznie %lldB danych\n", time_diff, counter, total_written_data);
         }
@@ -96,9 +114,12 @@ int main(int argc, char *argv[])
     printf("Koniec wysyłania danych.\n");
     printf("Rozmiar bufora: %zu\n", buf_size);
     printf("Wysłano łącznie: %lldB\n", total_written_data);
+    printf("Całkowity czas transmisji: %.3fs\n", (finish_time - start_time) / 1000000.0);
+    printf("Przepustowość: %.3f B/s\n", total_written_data / ((finish_time - start_time) / 1000000.0));
     printf("Liczba opóźnień: %lld\n", delay_count);
-    printf("Suma opóźnień wynosi: %lldus\n", delay_sum);
     printf("Największa wartość opóźnienia: %lldus\n", max_delay);
+    printf("Pierwsze \"duże\" opóźnienie (%.3fms) po wysłaniu: %lldB, czas: %.3fs\n", first_delay_value/1000.0, first_delay_bytes, first_delay_time / 1000000.0);
+    printf("Suma opóźnień wynosi: %lldus\n", delay_sum);
     printf("Łączny czas wykonywania funkcji write(): %lldus\n", write_time);
 
 
