@@ -10,24 +10,26 @@
 
 #define DEFAULT_SRV_IP "172.21.32.10"
 #define DEFAULT_PORT 5000
-#define DATA_SIZE 5 * 1024 * 1024 // 5MB
-#define BUF_SIZE 10 * 1024 // B
+#define DATA_SIZE (5 * 1024 * 1024) // 5MB
+#define DEFAULT_BUF_SIZE (10 * 1024) // B
 
-long long time_ms(void) {
+long long time_us(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    return (long long)ts.tv_sec * 1000000 + ts.tv_nsec / 1000;
 }
 
 int main(int argc, char *argv[])
 {
     const char *host_addr = (argc > 1) ? argv[1] : DEFAULT_SRV_IP;
     int port = (argc > 2) ? atoi(argv[2]) : DEFAULT_PORT;
+    size_t buf_size = (argc > 3) ? atoi(argv[3]) : DEFAULT_BUF_SIZE;
 
     setvbuf(stdout, NULL, _IOLBF, 0);   /* logi widoczne od razu w docker logs */
 
     int sfd = 0;
     struct sockaddr_in server;
+    memset(&server, 0, sizeof server);
 
     printf("Start klienta...\n");
 
@@ -38,7 +40,10 @@ int main(int argc, char *argv[])
     }
 
     server.sin_family = AF_INET;
-    inet_aton( host_addr, &server.sin_addr );
+    if(inet_aton( host_addr, &server.sin_addr ) == 0){
+        perror("invalid ip address");
+        exit(1);
+    }
     server.sin_port = htons(port);
 
     printf("Łączenie z %s:%d...\n", inet_ntoa(server.sin_addr), ntohs(server.sin_port));
@@ -48,30 +53,39 @@ int main(int argc, char *argv[])
     }
     printf("Połączono.\n");
 
-    char *data = malloc(BUF_SIZE);
-    memset(data, 'A', BUF_SIZE);
+    char *data = malloc(buf_size);
+    memset(data, 'A', buf_size);
     long long before_time;
     long long after_time;
     long long time_diff;
     int written_data;
     long long total_written_data = 0;
     long long counter = 0;
+    long long delay_sum = 0;
+    long long delay_count = 0;
+    long long write_time = 0;
+    long long max_delay = 0;
 
     while(total_written_data < DATA_SIZE){
-        // printf("%d:\tPróba wysłania danych...\n", counter);
-        before_time = time_ms();
-        if ((written_data = write(sfd, data, BUF_SIZE)) == -1){
+        size_t write_size = (DATA_SIZE - total_written_data < buf_size) ? (size_t)(DATA_SIZE - total_written_data) : buf_size; 
+        before_time = time_us();
+        if ((written_data = write(sfd, data, write_size)) == -1){
             perror("writing data to stream");
             exit(1);
         }
+        after_time = time_us();
         total_written_data += written_data;
-        after_time = time_ms();
         time_diff = after_time - before_time;
-        printf("%lld:\tWysłano %lldB danych. Łącznie: %lldB ", counter, written_data, total_written_data);
-        printf("Czas wysyłania danych: %lldms\n", time_diff);
+        write_time += time_diff;
+        printf("%lld:\tWysłano %dB danych. Łącznie: %lldB Czas wysyłania danych: %lldus\n", counter, written_data, total_written_data, time_diff);
 
-        if (time_diff > 0){
-            printf("Opóźnienie %lldms podczas wysyłania bufora nr %lld! Wysłano łącznie %lldB danych\n", time_diff, counter, total_written_data);
+        if (time_diff > 1000){
+            delay_sum += time_diff;
+            delay_count++;
+            if (time_diff > max_delay){
+                max_delay = time_diff;
+            }
+            printf("Opóźnienie %lldus podczas wysyłania bufora nr %lld! Wysłano łącznie %lldB danych\n", time_diff, counter, total_written_data);
         }
         counter++;
     }
@@ -79,7 +93,14 @@ int main(int argc, char *argv[])
 
     free(data);
     close(sfd);
-    printf("Koniec wysyłania danych. Wysłano łącznie: %lldB\n", total_written_data);
+    printf("Koniec wysyłania danych.\n");
+    printf("Rozmiar bufora: %zu\n", buf_size);
+    printf("Wysłano łącznie: %lldB\n", total_written_data);
+    printf("Liczba opóźnień: %lld\n", delay_count);
+    printf("Suma opóźnień wynosi: %lldus\n", delay_sum);
+    printf("Największa wartość opóźnienia: %lldus\n", max_delay);
+    printf("Łączny czas wykonywania funkcji write(): %lldus\n", write_time);
+
 
     return 0;
 }
