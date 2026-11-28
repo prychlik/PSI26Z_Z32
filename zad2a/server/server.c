@@ -13,7 +13,7 @@
 #define DEFAULT_PORT 5000
 
 int main(int argc, char *argv[]){
-    int                      sfd, s;
+    int                      sfd, s, port, length;
     char                     buf[BUF_SIZE];
     ssize_t                  nread;
     socklen_t                peer_addrlen;
@@ -25,14 +25,27 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
+    memset(&server, 0, sizeof(server));
+
+    port = (argc > 1) ? atoi(argv[1]) : DEFAULT_PORT;
+    if (port <= 0){
+        port = DEFAULT_PORT;
+    }
     server.sin_family      = AF_INET;
-    server.sin_port        = htons((argc > 1) ? atoi(argv[1]) : DEFAULT_PORT);
+    server.sin_port        = htons(port);
     server.sin_addr.s_addr = INADDR_ANY;
 
     if ((s=bind(sfd, (struct sockaddr *)&server, sizeof(server))) < 0){
         perror("bind()");
     }
     printf("bind() successful\n");
+
+    length = sizeof(server);
+    if (getsockname(sfd,(struct sockaddr *) &server, &length) == -1) {
+        perror("getting socket name");
+        exit(1);
+    }
+    printf("Socket port #%d\n", ntohs(server.sin_port));
 
 
     printf("waiting for packets...\n");
