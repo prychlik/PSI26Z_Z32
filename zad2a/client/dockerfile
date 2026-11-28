@@ -1,0 +1,6 @@
+FROM python:3
+ENV MPLBACKEND=Agg
+WORKDIR /results
+COPY client.py /app/client.py
+RUN pip install matplotlib
+ENTRYPOINT ["python", "-u", "/app/client.py"]
